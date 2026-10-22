@@ -1,0 +1,46 @@
+name: equipment_station
+description: "Pack Out By Shepherd — tablet equipment checkout station. Photo registry (each item's photo is its icon), tap-to-check-out, serial lookup, local log, Southern voice."
+publish_to: 'none'
+version: 1.1.0+3
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # Camera pinned to the last train built on CameraX 1.4.1 (see
+  # dependency_overrides below). CameraX 1.5.x breaks this build: its
+  # camera-core API jar carries JSpecify type-use annotations referencing
+  # androidx.concurrent's CallbackToFutureAdapter, which CameraX declares
+  # runtime-scope only, so the camerax plugin's javac fails with
+  # "class file for androidx.concurrent.futures.CallbackToFutureAdapter
+  # not found". Revisit when a camerax release pins a fixed CameraX.
+  camera: 0.11.1
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  path_provider: ^2.1.4
+  audioplayers: ^6.4.0
+  share_plus: ^10.1.2
+  shared_preferences: ^2.3.2
+  crypto: ^3.0.3
+  wakelock_plus: ^1.2.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.3.3
+
+dependency_overrides:
+  # Force the CameraX 1.4.1-based Android implementation (see the camera
+  # pin note above); camera 0.11.1's own range would otherwise float up
+  # to the broken CameraX 1.5.3 build.
+  camera_android_camerax: 0.6.17
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/
+    - assets/shepherd_icon.png
