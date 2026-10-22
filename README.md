@@ -8,6 +8,14 @@ A self-contained equipment checkout station that runs entirely on **one Android 
 
 Built for a Samsung Galaxy Tab S6 Lite on a stand by the door, but any reasonably modern Android tablet works.
 
+## ▶ Try the web sim
+
+**[Launch the live sim →](https://thedracospark-prog.github.io/Pack-Out/sim/)**
+
+<a href="https://thedracospark-prog.github.io/Pack-Out/sim/"><img src="sim_assets/gear/cooper.jpg" width="420" alt="Cooper the Aussie — find him under Dog, Aussie"></a>
+
+This is the **real app**, compiled for the web and locked to a demo mode — the same screens, the same flows, the same voice. The gear room is in-memory sample data (radios, lasers, optics, tools… and Cooper, filed under **Dog → Aussie**, serial `GOOD-BOY-1`, checked out constantly). Check gear out and back in, mistype a serial and watch it flag, then open staff mode — it ships with the default PIN **2468** and makes you change it on first entry, exactly like the real first run — correct the flag, register a new item with the simulated camera, and export the CSV. The banner wears a **WEB SIM** pill so nobody mistakes it for a live station, and a page refresh resets the demo to its seeded state. Nothing you do in the sim is saved anywhere.
+
 ## How it works
 
 **Members** (no PIN, no training):
@@ -62,6 +70,8 @@ Two build notes, both learned the hard way:
 
 **Signing:** release builds look for `android/key.properties` + a keystore that are **not committed** (see `.gitignore`). Without them the build falls back to the debug key — fine for testing, but a debug-signed APK will **not** install as an update over a station running a properly signed build. If you're taking over a live station, restore the key files from backup into `android/` before building.
 
+**The web sim** is the same source built with `flutter build web --dart-define=PACKOUT_SIM=true --base-href /Pack-Out/sim/`, from a staging copy whose pubspec adds `assets/sim/gear/` (fed from this repo's `sim_assets/gear/`). The flag swaps the SQLite store for the in-memory demo store and the camera for a preset-photo picker; on-device builds never set it and are unaffected. The built bundle lives in `docs/sim/` and is served by GitHub Pages.
+
 ## Project layout
 
 ```
@@ -72,13 +82,18 @@ lib/
   serial_field.dart serial entry — number pad first, full keyboard on tap
   staff.dart        staff mode: board, log, registry, roster, settings
   store.dart        SQLite store: registry, transactions, voice rotation
+  sim_store.dart    WEB SIM only: in-memory demo store (same interface)
+  sim_capture.dart  WEB SIM only: simulated camera (preset photo picker)
   pin.dart          staff PIN dialogs
   theme.dart        dark theme, purple accents
 test/
   store_test.dart   store semantics, voice rotation, v1→v2 DB migration
+  sim_store_test.dart  demo-store parity with the real store's semantics
 assets/
   audio/            the Southern voice pools
   shepherd_icon.png the Shepherd mark (banner + placeholder)
+sim_assets/gear/    preset photos for the web sim build (incl. Cooper)
+docs/sim/           the built web sim bundle, served by GitHub Pages
 BUILD_APK.bat       one-click Windows build
 README_TABLET.txt   the operator-facing quick guide
 ```
