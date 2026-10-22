@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -10,12 +12,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'branding.dart';
 import 'capture.dart';
 import 'pin.dart';
+import 'sim_capture.dart';
 import 'serial_field.dart';
 import 'store.dart';
 import 'theme.dart';
 
 class StaffHome extends StatefulWidget {
-  final Store store;
+  final StoreApi store;
   const StaffHome({super.key, required this.store});
   @override
   State<StaffHome> createState() => _StaffHomeState();
@@ -93,7 +96,7 @@ class _StaffHomeState extends State<StaffHome> {
 // ---------------- Board ----------------
 
 class BoardPage extends StatelessWidget {
-  final Store store;
+  final StoreApi store;
   const BoardPage({super.key, required this.store});
 
   @override
@@ -179,7 +182,7 @@ class BoardPage extends StatelessWidget {
 // ---------------- Log ----------------
 
 class LogPage extends StatefulWidget {
-  final Store store;
+  final StoreApi store;
   const LogPage({super.key, required this.store});
   @override
   State<LogPage> createState() => _LogPageState();
@@ -323,16 +326,25 @@ class _LogPageState extends State<LogPage> {
                           margin: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 5),
                           child: ListTile(
-                            leading: photo.isNotEmpty && File(photo).existsSync()
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.file(File(photo),
-                                        width: 52,
-                                        height: 52,
-                                        fit: BoxFit.cover),
-                                  )
-                                : const Icon(Icons.receipt_long,
-                                    color: kDim, size: 34),
+                            // Sim tx photos are asset paths (ItemPhoto
+                            // handles them); the File branch is device-only
+                            // and never evaluated in the web build, where
+                            // dart:io would throw.
+                            leading: photo.startsWith('asset://')
+                                ? ItemPhoto(
+                                    photoPath: photo, size: 52, radius: 8)
+                                : !kPackOutSim &&
+                                        photo.isNotEmpty &&
+                                        File(photo).existsSync()
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(File(photo),
+                                            width: 52,
+                                            height: 52,
+                                            fit: BoxFit.cover),
+                                      )
+                                    : const Icon(Icons.receipt_long,
+                                        color: kDim, size: 34),
                             title: Text(
                                 '${t['member']} — ${t['item_name'] ?? ''}'
                                     .trim(),
@@ -390,7 +402,7 @@ class _LogPageState extends State<LogPage> {
 // ---------------- Registry ----------------
 
 class RegistryPage extends StatefulWidget {
-  final Store store;
+  final StoreApi store;
   const RegistryPage({super.key, required this.store});
   @override
   State<RegistryPage> createState() => _RegistryPageState();
@@ -446,12 +458,14 @@ class _RegistryPageState extends State<RegistryPage> {
                   width: double.infinity,
                   child: FilledButton.tonalIcon(
                     onPressed: () async {
+                      final capTitle =
+                          'Photograph ${nameCtl.text.trim().isEmpty ? 'the equipment' : nameCtl.text.trim()}';
                       final shot = await Navigator.of(context)
                           .push<String>(
                         MaterialPageRoute(
-                            builder: (_) => CapturePhotoScreen(
-                                title:
-                                    'Photograph ${nameCtl.text.trim().isEmpty ? 'the equipment' : nameCtl.text.trim()}')),
+                            builder: (_) => kPackOutSim
+                                ? SimCaptureScreen(title: capTitle)
+                                : CapturePhotoScreen(title: capTitle)),
                       );
                       if (shot != null) setLocal(() => pendingShot = shot);
                     },
@@ -644,7 +658,7 @@ class _RegistryPageState extends State<RegistryPage> {
 // ---------------- Roster ----------------
 
 class RosterPage extends StatefulWidget {
-  final Store store;
+  final StoreApi store;
   const RosterPage({super.key, required this.store});
   @override
   State<RosterPage> createState() => _RosterPageState();
@@ -746,7 +760,7 @@ class _RosterPageState extends State<RosterPage> {
 // ---------------- Settings ----------------
 
 class SettingsPage extends StatefulWidget {
-  final Store store;
+  final StoreApi store;
   const SettingsPage({super.key, required this.store});
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -774,6 +788,18 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _exportCsv() async {
     try {
       final csv = await widget.store.exportCsv();
+      if (kPackOutSim) {
+        // Browsers have no temp file to hand a share sheet — share the
+        // bytes directly (lands as a download/share of the CSV).
+        await Share.shareXFiles(
+          [
+            XFile.fromData(Uint8List.fromList(utf8.encode(csv)),
+                name: 'equipment-log.csv', mimeType: 'text/csv'),
+          ],
+          subject: 'Equipment checkout log (CSV)',
+        );
+        return;
+      }
       final dir = await getTemporaryDirectory();
       final f = File(p.join(dir.path, 'equipment-log.csv'));
       await f.writeAsString(csv);

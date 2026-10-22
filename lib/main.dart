@@ -8,11 +8,14 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'branding.dart';
 import 'pin.dart';
 import 'serial_field.dart';
+import 'sim_store.dart';
 import 'staff.dart';
 import 'store.dart';
 import 'theme.dart';
 
-final store = Store();
+// On device: the SQLite store. In the WEB SIM build: the in-memory
+// demo store — same interface, same screens, sample data.
+final StoreApi store = kPackOutSim ? SimStore() : Store();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

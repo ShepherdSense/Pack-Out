@@ -1,7 +1,7 @@
 name: equipment_station
 description: "Pack Out By Shepherd — tablet equipment checkout station. Photo registry (each item's photo is its icon), tap-to-check-out, serial lookup, local log, Southern voice."
 publish_to: 'none'
-version: 1.1.0+3
+version: 1.1.1+4
 
 environment:
   sdk: ^3.13.4

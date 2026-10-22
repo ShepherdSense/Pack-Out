@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'store.dart';
 import 'theme.dart';
 
 /// The Pack Out banner, shown across every menu: the Shepherd icon, the
@@ -63,6 +64,27 @@ class ShepherdBanner extends StatelessWidget {
             ),
           ],
         ),
+        // The web sim labels itself wherever the banner rides — nobody
+        // mistakes the browser demo for a live station. Inert on device.
+        if (kPackOutSim) ...[
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              border: Border.all(color: kPurpleLight),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Text(
+              'WEB SIM',
+              style: TextStyle(
+                color: kPurpleLight,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -91,6 +113,26 @@ class ItemPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Web-sim photos are bundled assets behind an 'asset://' pseudo-path
+    // (dart:io Files don't exist in a browser). Real item photos are
+    // absolute file paths and never carry the prefix.
+    if (photoPath.startsWith('asset://')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Image.asset(
+          photoPath.substring('asset://'.length),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Image.asset(
+            'assets/shepherd_icon.png',
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
     final hasPhoto = photoPath.isNotEmpty && File(photoPath).existsSync();
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
@@ -119,6 +161,20 @@ class ItemPhotoWide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (photoPath.startsWith('asset://')) {
+      return Image.asset(
+        photoPath.substring('asset://'.length),
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Image.asset(
+          'assets/shepherd_icon.png',
+          width: double.infinity,
+          height: height,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
     final hasPhoto = photoPath.isNotEmpty && File(photoPath).existsSync();
     return hasPhoto
         ? Image.file(

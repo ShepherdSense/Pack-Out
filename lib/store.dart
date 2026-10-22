@@ -176,6 +176,53 @@ DateTime nextRotation([DateTime? now]) {
 
 // ---------- Store ----------
 
+/// True only in the WEB SIM build (`--dart-define=PACKOUT_SIM=true`): the
+/// real app compiled for the browser, backed by an in-memory demo store
+/// (see sim_store.dart) instead of SQLite, with simulated photo capture.
+/// On-device builds never set the flag, and every sim branch is inert
+/// there — the tablet app behaves exactly as it does without this code.
+const bool kPackOutSim = bool.fromEnvironment('PACKOUT_SIM');
+
+/// The surface the UI talks to. [Store] is the on-device SQLite
+/// implementation; the web sim swaps in an in-memory one behind the
+/// same interface so every screen runs unchanged.
+abstract class StoreApi {
+  Future<List<String>> members();
+  Future<List<Map<String, Object?>>> itemsRaw();
+  Future<List<Map<String, Object?>>> itemsWithStatus();
+  Future<Map<String, Object?>?> findItem(String serial);
+  Future<PostResult> postTransaction({
+    required String member,
+    required String serial,
+    String photoPath = '',
+  });
+  Future<List<Map<String, Object?>>> transactions({int? limit});
+  Future<int> openFlagCount();
+  Future<bool> correctTransaction(int id, String serial, {String? action});
+  Future<void> resolveTransaction(int id);
+  Future<void> upsertItem({
+    required String serial,
+    required String name,
+    String type = '',
+    String notes = '',
+    String photo = '',
+  });
+  Future<bool> updateItem({
+    required String originalNorm,
+    required String serial,
+    required String name,
+    String type = '',
+    String notes = '',
+    String? photo,
+  });
+  Future<void> setItemPhoto(String serialNorm, String photoPath);
+  Future<void> deleteItem(String serialNorm);
+  Future<void> addMember(String name);
+  Future<void> deleteMember(String name);
+  Future<String> exportCsv();
+  Future<String> storeItemPhoto(String serialNorm, String srcPath);
+}
+
 const seedMembers = ['Alex Rivera', 'Jordan Lee', 'Maria Santos', 'Sam Patel'];
 const seedItems = <(String, String, String, String)>[
   ('SN8847392', 'Thermal Camera', 'Optics', 'Sample item - replace with your real gear'),
@@ -193,7 +240,7 @@ class PostResult {
   const PostResult(this.id, this.action, this.unmatched, this.itemName);
 }
 
-class Store {
+class Store implements StoreApi {
   Database? _db;
   Directory? _photosDir;
   Directory? _itemPhotosDir;
@@ -247,6 +294,7 @@ class Store {
   /// Copy a freshly captured photo into the item-photo store, named by the
   /// item's normalized serial (a retake overwrites the previous portrait).
   /// Returns the stored path to save on the item row.
+  @override
   Future<String> storeItemPhoto(String serialNorm, String srcPath) async {
     await db; // ensures the directories exist
     final dest = File(p.join(_itemPhotosDir!.path, '$serialNorm.jpg'));
@@ -281,18 +329,21 @@ class Store {
     }
   }
 
+  @override
   Future<List<String>> members() async {
     final d = await db;
     final rows = await d.query('members', orderBy: 'name');
     return [for (final r in rows) r['name'] as String];
   }
 
+  @override
   Future<List<Map<String, Object?>>> itemsRaw() async {
     final d = await db;
     return d.query('items', orderBy: 'name');
   }
 
   /// Items with derived status: latest state-bearing (unmatched=0) transaction.
+  @override
   Future<List<Map<String, Object?>>> itemsWithStatus() async {
     final d = await db;
     final items = await itemsRaw();
@@ -318,6 +369,7 @@ class Store {
     return out;
   }
 
+  @override
   Future<Map<String, Object?>?> findItem(String serial) async {
     final d = await db;
     final rows = await d.query('items',
@@ -325,6 +377,7 @@ class Store {
     return rows.isEmpty ? null : rows.first;
   }
 
+  @override
   Future<PostResult> postTransaction({
     required String member,
     required String serial,
@@ -366,11 +419,13 @@ class Store {
     return PostResult(id, action, item == null, (item?['name'] as String?) ?? '');
   }
 
+  @override
   Future<List<Map<String, Object?>>> transactions({int? limit}) async {
     final d = await db;
     return d.query('transactions', orderBy: 'id DESC', limit: limit);
   }
 
+  @override
   Future<int> openFlagCount() async {
     final d = await db;
     return Sqflite.firstIntValue(await d.rawQuery(
@@ -380,6 +435,7 @@ class Store {
 
   /// Staff correction: set the true serial (and optionally the true action),
   /// preserving the original values for audit. Returns true if now matched.
+  @override
   Future<bool> correctTransaction(int id, String serial, {String? action}) async {
     if (normSerial(serial).isEmpty) {
       throw ArgumentError('corrected serial must not be blank');
@@ -407,12 +463,14 @@ class Store {
   }
 
   /// Close the flag WITHOUT making the row state-bearing (unmatched stays 1).
+  @override
   Future<void> resolveTransaction(int id) async {
     final d = await db;
     await d.update('transactions', {'resolved': 1},
         where: 'id=?', whereArgs: [id]);
   }
 
+  @override
   Future<void> upsertItem({
     required String serial,
     required String name,
@@ -438,6 +496,7 @@ class Store {
   /// normalized serial (an edit must never duplicate the row or REPLACE away
   /// a different item). Returns false when a DIFFERENT item already owns the
   /// new serial — the caller surfaces the conflict and nothing changes.
+  @override
   Future<bool> updateItem({
     required String originalNorm,
     required String serial,
@@ -496,12 +555,14 @@ class Store {
   /// Attach an already-stored portrait path to an item row. The registry
   /// save flow writes the item first and only touches photo files once
   /// the item write is known to have succeeded.
+  @override
   Future<void> setItemPhoto(String serialNorm, String photoPath) async {
     final d = await db;
     await d.update('items', {'photo': photoPath},
         where: 'serial_norm=?', whereArgs: [serialNorm]);
   }
 
+  @override
   Future<void> deleteItem(String serialNorm) async {
     final d = await db;
     await d.delete('items', where: 'serial_norm=?', whereArgs: [serialNorm]);
@@ -512,17 +573,20 @@ class Store {
     } catch (_) {}
   }
 
+  @override
   Future<void> addMember(String name) async {
     final d = await db;
     await d.insert('members', {'name': name},
         conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
+  @override
   Future<void> deleteMember(String name) async {
     final d = await db;
     await d.delete('members', where: 'name=?', whereArgs: [name]);
   }
 
+  @override
   Future<String> exportCsv() async {
     final rows = await transactions();
     final buf = StringBuffer(
