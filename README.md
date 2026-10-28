@@ -10,9 +10,9 @@ Built for a Samsung Galaxy Tab S6 Lite on a stand by the door, but any reasonabl
 
 ## ▶ Try the web sim
 
-**[Launch the live sim →](https://thedracospark-prog.github.io/Pack-Out/sim/)**
+**[Launch the live sim →](https://ShepherdSense.github.io/Pack-Out/sim/)**
 
-<a href="https://thedracospark-prog.github.io/Pack-Out/sim/"><img src="sim_assets/gear/cooper.jpg" width="420" alt="Cooper the Aussie — find him under Dog, Aussie"></a>
+<a href="https://ShepherdSense.github.io/Pack-Out/sim/"><img src="sim_assets/gear/cooper.jpg" width="420" alt="Cooper the Aussie — find him under Dog, Aussie"></a>
 
 This is the **real app**, compiled for the web and locked to a demo mode — the same screens, the same flows, the same voice. The gear room is in-memory sample data (radios, lasers, optics, tools… and Cooper, filed under **Dog → Aussie**, serial `GOOD-BOY-1`, checked out constantly). Check gear out and back in, mistype a serial and watch it flag, then open staff mode — it ships with the default PIN **2468** and makes you change it on first entry, exactly like the real first run — correct the flag, register a new item with the simulated camera, and export the CSV. The banner wears a **WEB SIM** pill so nobody mistakes it for a live station, and a page refresh resets the demo to its seeded state. Nothing you do in the sim is saved anywhere.
 
