@@ -142,13 +142,23 @@ class _KioskHomeState extends State<KioskHome> {
                       avatar: const Icon(Icons.flag, size: 16, color: kWarn),
                       label: Text('$_flags to sort'),
                       backgroundColor: kCard,
+                      side: BorderSide(color: kWarn.withValues(alpha: 0.35)),
                       labelStyle: const TextStyle(color: kWarn),
                     ),
-                  IconButton(
+                  const SizedBox(width: 8),
+                  TextButton.icon(
                     onPressed: _staffGate,
-                    icon: const Icon(Icons.admin_panel_settings_outlined),
-                    tooltip: 'Staff',
-                    color: kDim,
+                    icon: const Icon(Icons.admin_panel_settings_outlined,
+                        size: 18),
+                    label: const Text('Staff'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: kPurple,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ],
               ),
